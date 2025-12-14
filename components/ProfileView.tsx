@@ -1,14 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { UserProfile } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-import { Target, Skull, Trophy, TrendingUp, Share2, Mail, Shield, FileText, RefreshCcw, Scale, LogOut, ChevronRight } from 'lucide-react';
+import { Target, Skull, Trophy, TrendingUp, Share2, Mail, Shield, FileText, RefreshCcw, Scale, LogOut, ChevronRight, Edit2, Save, X, Camera } from 'lucide-react';
 
 interface ProfileViewProps {
   user: UserProfile;
   onLogout: () => void;
+  onUpdateProfile: (updates: Partial<UserProfile>) => void;
 }
 
-const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout }) => {
+const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, onUpdateProfile }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(user.username);
+  const [editAvatar, setEditAvatar] = useState(user.avatar);
+
   const killData = [
     { name: 'Headshots', value: 120 },
     { name: 'Body shots', value: 200 },
@@ -35,23 +40,107 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout }) => {
     { icon: Scale, label: 'Fair Play Policy', color: 'text-yellow-400', sub: null },
   ];
 
+  const handleSave = () => {
+    onUpdateProfile({
+        username: editName,
+        avatar: editAvatar
+    });
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditName(user.username);
+    setEditAvatar(user.avatar);
+    setIsEditing(false);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header Profile Card */}
       <div className="flex flex-col md:flex-row items-center md:items-start md:space-x-8 bg-slate-800 p-8 rounded-2xl border border-slate-700 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-4 opacity-5">
+        {/* Edit Controls */}
+        <div className="absolute top-4 right-4 z-30 flex space-x-2">
+            {isEditing ? (
+                <>
+                    <button 
+                        onClick={handleSave}
+                        className="p-2 bg-green-600 hover:bg-green-500 rounded-full text-white shadow-lg transition-transform hover:scale-110"
+                        title="Save Changes"
+                    >
+                        <Save className="w-5 h-5" />
+                    </button>
+                    <button 
+                        onClick={handleCancel}
+                        className="p-2 bg-slate-600 hover:bg-slate-500 rounded-full text-white shadow-lg transition-transform hover:scale-110"
+                         title="Cancel"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </>
+            ) : (
+                <button 
+                    onClick={() => {
+                        setEditName(user.username);
+                        setEditAvatar(user.avatar);
+                        setIsEditing(true);
+                    }}
+                    className="p-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 hover:border-indigo-500 rounded-full text-slate-300 hover:text-white transition-all"
+                    title="Edit Profile"
+                >
+                    <Edit2 className="w-5 h-5" />
+                </button>
+            )}
+        </div>
+
+        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
            <Target className="w-64 h-64" />
         </div>
         
-        <div className="relative z-10">
-           <img src={user.avatar} alt="Profile" className="w-32 h-32 rounded-full border-4 border-indigo-500 shadow-lg shadow-indigo-500/20" />
-           <div className="absolute bottom-0 right-0 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded-full border border-slate-900">
-             LVL 42
-           </div>
+        <div className="relative z-10 flex flex-col items-center">
+            <div className="relative group">
+                <img 
+                    src={isEditing ? editAvatar : user.avatar} 
+                    alt="Profile" 
+                    className="w-32 h-32 object-cover rounded-full border-4 border-indigo-500 shadow-lg shadow-indigo-500/20 bg-slate-900" 
+                    onError={(e) => { (e.target as HTMLImageElement).src = 'https://ui-avatars.com/api/?name=User&background=6366f1&color=fff'; }}
+                />
+                <div className="absolute bottom-0 right-0 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded-full border border-slate-900">
+                    LVL 42
+                </div>
+            </div>
+            
+            {isEditing && (
+                <div className="mt-4 w-full">
+                    <label className="text-xs text-slate-400 mb-1 block">Avatar URL</label>
+                    <div className="flex items-center bg-slate-900 rounded-lg border border-slate-600 focus-within:border-indigo-500 px-3 py-2">
+                        <Camera className="w-4 h-4 text-slate-500 mr-2" />
+                        <input 
+                            type="text" 
+                            value={editAvatar}
+                            onChange={(e) => setEditAvatar(e.target.value)}
+                            className="bg-transparent border-none focus:outline-none text-xs text-white w-full"
+                            placeholder="https://..."
+                        />
+                    </div>
+                </div>
+            )}
         </div>
         
-        <div className="mt-4 md:mt-0 text-center md:text-left flex-1 relative z-10">
-          <h1 className="text-3xl font-bold text-white font-rajdhani">{user.username}</h1>
+        <div className="mt-6 md:mt-0 text-center md:text-left flex-1 relative z-10 w-full md:pl-4">
+          {isEditing ? (
+              <div className="mb-2">
+                  <label className="text-xs text-slate-400 mb-1 block text-left">Username</label>
+                  <input 
+                    type="text" 
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full md:w-2/3 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-xl font-bold text-white font-rajdhani focus:outline-none focus:border-indigo-500"
+                  />
+              </div>
+          ) : (
+              <h1 className="text-3xl font-bold text-white font-rajdhani">{user.username}</h1>
+          )}
+          
           <p className="text-slate-400">Pro Player • India Region</p>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">

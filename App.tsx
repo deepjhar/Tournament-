@@ -6,7 +6,7 @@ import WalletView from './components/WalletView';
 import MyTournamentsView from './components/MyTournamentsView';
 import AiChat from './components/AiChat';
 import AuthView from './components/AuthView';
-import { Tournament, TournamentStatus, GameType, Transaction } from './types';
+import { Tournament, TournamentStatus, GameType, Transaction, UserProfile } from './types';
 import { MOCK_TOURNAMENTS, INITIAL_USER, GAME_ICONS, PRE_GENERATED_RULES, MOCK_TRANSACTIONS } from './constants';
 import { generateTournamentStrategy } from './services/geminiService';
 import { supabase } from './services/supabase';
@@ -272,6 +272,16 @@ const TournamentDetailView: React.FC<{
   );
 };
 
+// Helper to get stored profile
+const getStoredProfile = () => {
+    try {
+        const stored = localStorage.getItem('battlezone_user_profile');
+        return stored ? JSON.parse(stored) : {};
+    } catch (e) {
+        return {};
+    }
+};
+
 // Main App Component
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('home');
@@ -282,34 +292,49 @@ const App: React.FC = () => {
   // Auth State
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [user, setUser] = useState(INITIAL_USER);
+  
+  // Initialize User with fallback to local storage
+  const [user, setUser] = useState<UserProfile>(() => ({
+    ...INITIAL_USER,
+    ...getStoredProfile()
+  }));
+
   const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
 
   // Initialize Session
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      
+      const stored = getStoredProfile();
+
       if (session?.user) {
         setUser(prev => ({
            ...prev,
            id: session.user.id,
-           username: session.user.email?.split('@')[0] || prev.username
+           username: stored.username || session.user.email?.split('@')[0] || prev.username,
+           avatar: stored.avatar || prev.avatar,
+           walletBalance: stored.walletBalance !== undefined ? stored.walletBalance : prev.walletBalance
          }));
+      } else {
+        // If not logged in, we might still have stored edits for the guest user
+        setUser(prev => ({ ...prev, ...stored }));
       }
       setAuthLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      const stored = getStoredProfile();
+      
       if (session?.user) {
         setUser(prev => ({
            ...prev,
            id: session.user.id,
-           username: session.user.email?.split('@')[0] || prev.username
+           username: stored.username || session.user.email?.split('@')[0] || prev.username,
+           avatar: stored.avatar || prev.avatar,
+           walletBalance: stored.walletBalance !== undefined ? stored.walletBalance : prev.walletBalance
          }));
-      } else {
-        // Reset to initial mock user on logout, though AuthView will take over
-        setUser(INITIAL_USER);
       }
       setAuthLoading(false);
     });
@@ -317,10 +342,27 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const handleUpdateProfile = (updates: Partial<UserProfile>) => {
+    setUser(prev => {
+        const updated = { ...prev, ...updates };
+        // Save to local storage for persistence
+        const toSave = {
+            username: updated.username,
+            avatar: updated.avatar,
+            walletBalance: updated.walletBalance
+        };
+        localStorage.setItem('battlezone_user_profile', JSON.stringify(toSave));
+        return updated;
+    });
+  };
+
   const handleJoinTournament = (id: string, fee: number) => {
     if (user.walletBalance >= fee) {
         setJoinedTournaments([...joinedTournaments, id]);
-        setUser({...user, walletBalance: user.walletBalance - fee});
+        
+        // Update user wallet via handleUpdateProfile to persist
+        const newBalance = user.walletBalance - fee;
+        handleUpdateProfile({ walletBalance: newBalance });
         
         // Record Transaction
         const newTx: Transaction = {
@@ -339,7 +381,9 @@ const App: React.FC = () => {
   };
 
   const handleAddFunds = (amount: number) => {
-    setUser({ ...user, walletBalance: user.walletBalance + amount });
+    const newBalance = user.walletBalance + amount;
+    handleUpdateProfile({ walletBalance: newBalance });
+    
     const newTx: Transaction = {
       id: `tx${Date.now()}`,
       type: 'DEPOSIT',
@@ -353,7 +397,9 @@ const App: React.FC = () => {
 
   const handleWithdraw = (amount: number) => {
     if (user.walletBalance >= amount) {
-      setUser({ ...user, walletBalance: user.walletBalance - amount });
+      const newBalance = user.walletBalance - amount;
+      handleUpdateProfile({ walletBalance: newBalance });
+
       const newTx: Transaction = {
         id: `tx${Date.now()}`,
         type: 'WITHDRAWAL',
@@ -371,6 +417,8 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     if (confirm("Are you sure you want to logout?")) {
         await supabase.auth.signOut();
+        localStorage.removeItem('battlezone_user_profile'); // Optional: clear local profile on logout
+        window.location.reload();
     }
   };
 
@@ -394,7 +442,7 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     if (currentView === 'profile') {
-      return <ProfileView user={user} onLogout={handleLogout} />;
+      return <ProfileView user={user} onLogout={handleLogout} onUpdateProfile={handleUpdateProfile} />;
     }
 
     if (currentView === 'wallet') {
