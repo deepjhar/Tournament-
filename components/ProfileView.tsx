@@ -1,13 +1,14 @@
 import React from 'react';
 import { UserProfile } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-import { Target, Skull, Trophy, TrendingUp } from 'lucide-react';
+import { Target, Skull, Trophy, TrendingUp, Share2, Mail, Shield, FileText, RefreshCcw, Scale, LogOut, ChevronRight } from 'lucide-react';
 
 interface ProfileViewProps {
   user: UserProfile;
+  onLogout: () => void;
 }
 
-const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
+const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout }) => {
   const killData = [
     { name: 'Headshots', value: 120 },
     { name: 'Body shots', value: 200 },
@@ -25,17 +26,31 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
     { name: 'Match 5', kills: 6, rank: 8 },
   ];
 
+  const menuItems = [
+    { icon: Share2, label: 'Refer & Earn', color: 'text-green-400', sub: 'Get $5 per friend' },
+    { icon: Mail, label: 'Contact Us', color: 'text-blue-400', sub: 'support@battlezone.com' },
+    { icon: Shield, label: 'Privacy Policy', color: 'text-slate-400', sub: null },
+    { icon: FileText, label: 'Terms & Conditions', color: 'text-slate-400', sub: null },
+    { icon: RefreshCcw, label: 'Refund & Cancellation', color: 'text-orange-400', sub: null },
+    { icon: Scale, label: 'Fair Play Policy', color: 'text-yellow-400', sub: null },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row items-center md:items-start md:space-x-8 bg-slate-800 p-8 rounded-2xl border border-slate-700">
-        <div className="relative">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header Profile Card */}
+      <div className="flex flex-col md:flex-row items-center md:items-start md:space-x-8 bg-slate-800 p-8 rounded-2xl border border-slate-700 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-4 opacity-5">
+           <Target className="w-64 h-64" />
+        </div>
+        
+        <div className="relative z-10">
            <img src={user.avatar} alt="Profile" className="w-32 h-32 rounded-full border-4 border-indigo-500 shadow-lg shadow-indigo-500/20" />
            <div className="absolute bottom-0 right-0 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded-full border border-slate-900">
              LVL 42
            </div>
         </div>
         
-        <div className="mt-4 md:mt-0 text-center md:text-left flex-1">
+        <div className="mt-4 md:mt-0 text-center md:text-left flex-1 relative z-10">
           <h1 className="text-3xl font-bold text-white font-rajdhani">{user.username}</h1>
           <p className="text-slate-400">Pro Player • India Region</p>
           
@@ -116,6 +131,43 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+
+      {/* Account Menu */}
+      <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+        <div className="p-6 border-b border-slate-700">
+           <h3 className="text-xl font-bold font-rajdhani text-white">Account & Settings</h3>
+        </div>
+        <div className="divide-y divide-slate-700">
+           {menuItems.map((item, idx) => (
+             <button 
+                key={idx}
+                className="w-full flex items-center justify-between p-4 hover:bg-slate-700/50 transition-colors group"
+             >
+                <div className="flex items-center space-x-4">
+                   <div className={`p-2 rounded-lg bg-slate-900 ${item.color}`}>
+                      <item.icon className="w-5 h-5" />
+                   </div>
+                   <div className="text-left">
+                      <span className="block font-medium text-slate-200 group-hover:text-white transition-colors">{item.label}</span>
+                      {item.sub && <span className="text-xs text-slate-500">{item.sub}</span>}
+                   </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-white transition-colors" />
+             </button>
+           ))}
+           <button 
+              onClick={onLogout}
+              className="w-full flex items-center justify-between p-4 hover:bg-red-500/10 transition-colors group"
+           >
+              <div className="flex items-center space-x-4">
+                 <div className="p-2 rounded-lg bg-slate-900 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-colors">
+                    <LogOut className="w-5 h-5" />
+                 </div>
+                 <span className="font-medium text-red-400 group-hover:text-red-300 transition-colors">Logout</span>
+              </div>
+           </button>
         </div>
       </div>
     </div>

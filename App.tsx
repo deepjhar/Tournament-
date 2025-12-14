@@ -5,10 +5,13 @@ import ProfileView from './components/ProfileView';
 import WalletView from './components/WalletView';
 import MyTournamentsView from './components/MyTournamentsView';
 import AiChat from './components/AiChat';
+import AuthView from './components/AuthView';
 import { Tournament, TournamentStatus, GameType, Transaction } from './types';
 import { MOCK_TOURNAMENTS, INITIAL_USER, GAME_ICONS, PRE_GENERATED_RULES, MOCK_TRANSACTIONS } from './constants';
 import { generateTournamentStrategy } from './services/geminiService';
-import { Clock, Users, Trophy, ChevronLeft, MapPin, Play, CheckCircle, ChevronRight } from 'lucide-react';
+import { supabase } from './services/supabase';
+import { Clock, Users, Trophy, ChevronLeft, MapPin, Play, CheckCircle, ChevronRight, Loader2 } from 'lucide-react';
+import { Session } from '@supabase/supabase-js';
 
 // Banner Carousel Component
 const BannerCarousel = () => {
@@ -275,8 +278,44 @@ const App: React.FC = () => {
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [joinedTournaments, setJoinedTournaments] = useState<string[]>([]);
   const [filterGame, setFilterGame] = useState<GameType | 'ALL'>('ALL');
+  
+  // Auth State
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [user, setUser] = useState(INITIAL_USER);
   const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
+
+  // Initialize Session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        setUser(prev => ({
+           ...prev,
+           id: session.user.id,
+           username: session.user.email?.split('@')[0] || prev.username
+         }));
+      }
+      setAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        setUser(prev => ({
+           ...prev,
+           id: session.user.id,
+           username: session.user.email?.split('@')[0] || prev.username
+         }));
+      } else {
+        // Reset to initial mock user on logout, though AuthView will take over
+        setUser(INITIAL_USER);
+      }
+      setAuthLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleJoinTournament = (id: string, fee: number) => {
     if (user.walletBalance >= fee) {
@@ -329,14 +368,33 @@ const App: React.FC = () => {
     }
   };
 
+  const handleLogout = async () => {
+    if (confirm("Are you sure you want to logout?")) {
+        await supabase.auth.signOut();
+    }
+  };
+
   const filteredTournaments = MOCK_TOURNAMENTS.filter(t => {
     if (filterGame === 'ALL') return true;
     return t.game === filterGame;
   });
 
+  // Render Logic
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <AuthView />;
+  }
+
   const renderContent = () => {
     if (currentView === 'profile') {
-      return <ProfileView user={user} />;
+      return <ProfileView user={user} onLogout={handleLogout} />;
     }
 
     if (currentView === 'wallet') {
