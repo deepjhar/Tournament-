@@ -441,7 +441,12 @@ const App: React.FC = () => {
 
         if (error) {
              console.error("Join Tournament Error:", error);
-             alert(`Error: ${error.message}`);
+             // Friendly error message for missing profile or FK issues
+             if (error.message.includes('foreign key constraint')) {
+                 alert("Account setup incomplete. Please try refreshing the page or running the update script.");
+             } else {
+                 alert(`Error: ${error.message}`);
+             }
              // Revert
              setUser(prev => ({ ...prev, walletBalance: oldBalance }));
              setJoinedTournaments(prev => prev.filter(tid => tid !== id));
@@ -464,7 +469,11 @@ const App: React.FC = () => {
     
     if (error) {
         console.error("Add Funds Error:", error);
-        alert(`Failed to add funds: ${error.message}. Please ensuring you ran the updated SQL script.`);
+        if (error.message.includes('foreign key constraint')) {
+             alert("We couldn't verify your wallet profile. Please try logging out and logging back in, or contact support.");
+        } else {
+             alert(`Failed to add funds: ${error.message}`);
+        }
         // Revert
         setUser(prev => ({ ...prev, walletBalance: oldBalance }));
     }
@@ -481,7 +490,11 @@ const App: React.FC = () => {
 
       if (error) {
          console.error("Withdraw Error:", error);
-         alert(`Withdrawal failed: ${error.message}`);
+         if (error.message.includes('foreign key constraint')) {
+            alert("We couldn't verify your wallet profile. Please try logging out and logging back in.");
+         } else {
+            alert(`Withdrawal failed: ${error.message}`);
+         }
          // Revert
          setUser(prev => ({ ...prev, walletBalance: oldBalance }));
       }
