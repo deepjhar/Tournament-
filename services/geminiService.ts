@@ -6,8 +6,8 @@ let aiClient: GoogleGenAI | null = null;
 const getClient = () => {
   if (aiClient) return aiClient;
 
-  // Safely attempt to get API key from process.env if available
-  const apiKey = (window as any).process?.env?.API_KEY || '';
+  // The API key is injected by Vite's define plugin during build
+  const apiKey = process.env.API_KEY;
 
   if (!apiKey) {
     console.warn("Gemini API Key missing. AI features will be disabled.");
