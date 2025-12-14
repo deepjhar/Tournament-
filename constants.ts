@@ -9,6 +9,7 @@ export const INITIAL_USER: UserProfile = {
   wins: 18,
   kills: 423,
   kdRatio: 3.14,
+  isAdmin: false,
 };
 
 export const MOCK_TOURNAMENTS: Tournament[] = [

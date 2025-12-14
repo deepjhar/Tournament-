@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserProfile, Transaction } from '../types';
-import { Wallet, ArrowUpRight, ArrowDownLeft, History } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownLeft, History, Clock } from 'lucide-react';
 
 interface WalletViewProps {
   user: UserProfile;
@@ -52,7 +52,13 @@ const WalletView: React.FC<WalletViewProps> = ({ user, transactions, onAddFunds,
       {/* Action Area */}
       {activeAction && (
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 animate-in fade-in slide-in-from-top-4">
-           <h3 className="text-xl font-bold mb-4 font-rajdhani">{activeAction === 'deposit' ? 'Add Funds' : 'Withdraw Funds'}</h3>
+           <h3 className="text-xl font-bold mb-4 font-rajdhani">{activeAction === 'deposit' ? 'Add Funds Request' : 'Withdraw Funds Request'}</h3>
+           <p className="text-sm text-yellow-400 mb-4 flex items-center">
+             <Clock className="w-4 h-4 mr-2" />
+             {activeAction === 'deposit' 
+                ? "Funds will be added after Admin approval." 
+                : "Funds will be locked immediately and processed after approval."}
+           </p>
            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
               <input 
                 type="number" 
@@ -66,7 +72,7 @@ const WalletView: React.FC<WalletViewProps> = ({ user, transactions, onAddFunds,
                   onClick={handleSubmit}
                   className="bg-green-600 hover:bg-green-500 text-white font-bold px-8 py-3 rounded-lg transition-colors flex-1 sm:flex-none"
                 >
-                  Confirm
+                  Submit Request
                 </button>
                 <button 
                   onClick={() => setActiveAction(null)}
@@ -109,10 +115,13 @@ const WalletView: React.FC<WalletViewProps> = ({ user, transactions, onAddFunds,
                    }`}>
                       {tx.type === 'DEPOSIT' || tx.type === 'PRIZE_WIN' ? '+' : '-'}₹{tx.amount}
                    </div>
-                   <div className={`text-xs font-bold uppercase ${
-                     tx.status === 'COMPLETED' ? 'text-slate-500' : 
-                     tx.status === 'PENDING' ? 'text-orange-400' : 'text-red-400'
-                   }`}>{tx.status}</div>
+                   <div className={`text-xs font-bold uppercase flex items-center justify-end mt-1 ${
+                     tx.status === 'COMPLETED' ? 'text-green-500' : 
+                     tx.status === 'PENDING' ? 'text-yellow-500' : 'text-red-500'
+                   }`}>
+                      {tx.status === 'PENDING' && <Clock className="w-3 h-3 mr-1" />}
+                      {tx.status}
+                   </div>
                 </div>
              </div>
            ))}
