@@ -28,11 +28,27 @@ const AuthView: React.FC = () => {
         if (error) throw error;
         alert('Registration successful! Please check your email to confirm your account.');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        // 1. Perform Sign In
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
+        if (authError) throw authError;
+
+        // 2. If Admin Mode, STRICTLY check the profile role immediately
+        if (isAdminMode && authData.user) {
+           const { data: profile, error: profileError } = await supabase
+             .from('profiles')
+             .select('is_admin')
+             .eq('id', authData.user.id)
+             .single();
+             
+           if (profileError || !profile?.is_admin) {
+             // Not an admin? Sign them out immediately.
+             await supabase.auth.signOut();
+             throw new Error("Access Denied: You do not have Administrator privileges.");
+           }
+        }
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
