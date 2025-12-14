@@ -4,7 +4,7 @@ export const INITIAL_USER: UserProfile = {
   id: 'u1',
   username: 'ShadowSlayer',
   avatar: 'https://picsum.photos/200/200?random=user',
-  walletBalance: 450,
+  walletBalance: 250, // INR
   gamesPlayed: 142,
   wins: 18,
   kills: 423,
@@ -18,8 +18,8 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
     game: GameType.PUBG,
     map: 'Erangel',
     mode: TournamentMode.SQUAD,
-    entryFee: 50,
-    prizePool: 5000,
+    entryFee: 100,
+    prizePool: 10000,
     startTime: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
     status: TournamentStatus.FILLING_FAST,
     maxSlots: 25,
@@ -33,8 +33,8 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
     game: GameType.FREE_FIRE,
     map: 'Bermuda',
     mode: TournamentMode.SOLO,
-    entryFee: 20,
-    prizePool: 1500,
+    entryFee: 50,
+    prizePool: 3000,
     startTime: new Date(Date.now() + 3600000).toISOString(), // 1 hour
     status: TournamentStatus.OPEN,
     maxSlots: 48,
@@ -48,8 +48,8 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
     game: GameType.PUBG,
     map: 'Miramar',
     mode: TournamentMode.DUO,
-    entryFee: 100,
-    prizePool: 10000,
+    entryFee: 500,
+    prizePool: 50000,
     startTime: new Date(Date.now() + 172800000).toISOString(), // 2 days
     status: TournamentStatus.OPEN,
     maxSlots: 50,
@@ -64,7 +64,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
     map: 'Purgatory',
     mode: TournamentMode.SQUAD,
     entryFee: 0,
-    prizePool: 500,
+    prizePool: 1000,
     startTime: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
     status: TournamentStatus.LIVE,
     maxSlots: 12,
@@ -79,7 +79,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
     map: 'Sanhok',
     mode: TournamentMode.SQUAD,
     entryFee: 200,
-    prizePool: 20000,
+    prizePool: 25000,
     startTime: new Date(Date.now() - 86400000).toISOString(), // Yesterday
     status: TournamentStatus.COMPLETED,
     maxSlots: 20,
@@ -103,7 +103,7 @@ export const PRE_GENERATED_RULES = [
 
 export const MOCK_TRANSACTIONS: Transaction[] = [
   { id: 'tx1', type: 'DEPOSIT', amount: 500, date: new Date(Date.now() - 86400000 * 5).toISOString(), description: 'Added via UPI', status: 'COMPLETED' },
-  { id: 'tx2', type: 'ENTRY_FEE', amount: 50, date: new Date(Date.now() - 86400000 * 2).toISOString(), description: 'Entry: Erangel Elite', status: 'COMPLETED' },
+  { id: 'tx2', type: 'ENTRY_FEE', amount: 100, date: new Date(Date.now() - 86400000 * 2).toISOString(), description: 'Entry: Erangel Elite', status: 'COMPLETED' },
   { id: 'tx3', type: 'PRIZE_WIN', amount: 200, date: new Date(Date.now() - 43200000).toISOString(), description: 'Win: Sanhok Rush', status: 'COMPLETED' },
-  { id: 'tx4', type: 'WITHDRAWAL', amount: 100, date: new Date(Date.now() - 3600000).toISOString(), description: 'Withdrawal to Bank', status: 'PENDING' },
+  { id: 'tx4', type: 'WITHDRAWAL', amount: 150, date: new Date(Date.now() - 3600000).toISOString(), description: 'Withdrawal to Bank', status: 'PENDING' },
 ];

@@ -32,7 +32,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, onUpdateProfi
   ];
 
   const menuItems = [
-    { icon: Share2, label: 'Refer & Earn', color: 'text-green-400', sub: 'Get $5 per friend' },
+    { icon: Share2, label: 'Refer & Earn', color: 'text-green-400', sub: 'Get ₹100 per friend' },
     { icon: Mail, label: 'Contact Us', color: 'text-blue-400', sub: 'support@battlezone.com' },
     { icon: Shield, label: 'Privacy Policy', color: 'text-slate-400', sub: null },
     { icon: FileText, label: 'Terms & Conditions', color: 'text-slate-400', sub: null },

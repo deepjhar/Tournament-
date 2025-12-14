@@ -31,7 +31,7 @@ const WalletView: React.FC<WalletViewProps> = ({ user, transactions, onAddFunds,
          </div>
          <div className="relative z-10">
             <h2 className="text-indigo-100 font-medium mb-2">Total Balance</h2>
-            <div className="text-5xl font-bold text-white font-mono mb-6">${user.walletBalance.toFixed(2)}</div>
+            <div className="text-5xl font-bold text-white font-mono mb-6">₹{user.walletBalance.toFixed(2)}</div>
             <div className="flex space-x-4">
                <button 
                  onClick={() => setActiveAction('deposit')}
@@ -58,7 +58,7 @@ const WalletView: React.FC<WalletViewProps> = ({ user, transactions, onAddFunds,
                 type="number" 
                 value={amount}
                 onChange={e => setAmount(e.target.value)}
-                placeholder="Enter Amount"
+                placeholder="Enter Amount (₹)"
                 className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500 font-mono"
               />
               <div className="flex space-x-2">
@@ -107,7 +107,7 @@ const WalletView: React.FC<WalletViewProps> = ({ user, transactions, onAddFunds,
                    <div className={`font-mono font-bold ${
                       tx.type === 'DEPOSIT' || tx.type === 'PRIZE_WIN' ? 'text-green-400' : 'text-white'
                    }`}>
-                      {tx.type === 'DEPOSIT' || tx.type === 'PRIZE_WIN' ? '+' : '-'}${tx.amount}
+                      {tx.type === 'DEPOSIT' || tx.type === 'PRIZE_WIN' ? '+' : '-'}₹{tx.amount}
                    </div>
                    <div className={`text-xs font-bold uppercase ${
                      tx.status === 'COMPLETED' ? 'text-slate-500' : 

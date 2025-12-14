@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Tournament, GameType, TournamentStatus } from '../types';
 import { GAME_ICONS } from '../constants';
 import { Users, Calendar, MapPin, Trophy } from 'lucide-react';
@@ -73,14 +73,14 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament, onClick }) 
             <span className="text-xs text-slate-500 uppercase font-semibold">Prize Pool</span>
             <div className="flex items-center text-yellow-400 font-bold font-mono">
               <Trophy className="w-4 h-4 mr-1" />
-              ${tournament.prizePool}
+              ₹{tournament.prizePool}
             </div>
           </div>
           
           <div className="flex flex-col items-end">
             <span className="text-xs text-slate-500 uppercase font-semibold">Entry</span>
             <span className={`font-bold ${tournament.entryFee === 0 ? 'text-green-400' : 'text-white'}`}>
-              {tournament.entryFee === 0 ? 'FREE' : `$${tournament.entryFee}`}
+              {tournament.entryFee === 0 ? 'FREE' : `₹${tournament.entryFee}`}
             </span>
           </div>
         </div>

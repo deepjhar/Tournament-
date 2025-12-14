@@ -29,7 +29,7 @@ const BannerCarousel = () => {
       id: 2,
       image: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=1200&q=80',
       title: 'WEEKEND TOURNAMENT',
-      subtitle: '$10,000 Prize Pool - Squads Only',
+      subtitle: '₹10,000 Prize Pool - Squads Only',
       color: 'text-indigo-400'
     },
     {
@@ -135,7 +135,7 @@ const TournamentDetailView: React.FC<{
            <div className="flex flex-wrap items-center gap-4 text-sm md:text-base text-slate-300">
               <div className="flex items-center"><MapPin className="w-4 h-4 mr-1 text-indigo-400"/> {tournament.map}</div>
               <div className="flex items-center"><Clock className="w-4 h-4 mr-1 text-indigo-400"/> {new Date(tournament.startTime).toLocaleString()}</div>
-              <div className="flex items-center text-yellow-400 font-bold"><Trophy className="w-4 h-4 mr-1"/> Prize: ${tournament.prizePool}</div>
+              <div className="flex items-center text-yellow-400 font-bold"><Trophy className="w-4 h-4 mr-1"/> Prize: ₹{tournament.prizePool}</div>
            </div>
         </div>
       </div>
@@ -230,7 +230,7 @@ const TournamentDetailView: React.FC<{
              <div className="flex justify-between items-center mb-6">
                 <span className="text-slate-400">Entry Fee</span>
                 <span className={`text-2xl font-bold font-rajdhani ${tournament.entryFee === 0 ? 'text-green-400' : 'text-white'}`}>
-                  {tournament.entryFee === 0 ? 'FREE' : `$${tournament.entryFee}`}
+                  {tournament.entryFee === 0 ? 'FREE' : `₹${tournament.entryFee}`}
                 </span>
              </div>
 

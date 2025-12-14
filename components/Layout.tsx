@@ -54,7 +54,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, currentView, onNavigate
                 className="hidden sm:flex items-center bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded-full border border-slate-700 transition-colors cursor-pointer"
               >
                 <Wallet className="h-4 w-4 text-green-400 mr-2" />
-                <span className="font-mono text-sm font-bold text-green-400">${user.walletBalance.toFixed(2)}</span>
+                <span className="font-mono text-sm font-bold text-green-400">₹{user.walletBalance.toFixed(2)}</span>
               </button>
               <button 
                 onClick={() => onNavigate('profile')}
