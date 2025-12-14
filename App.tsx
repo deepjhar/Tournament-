@@ -325,7 +325,8 @@ const App: React.FC = () => {
           id: profile.id,
           username: profile.username || session.user.email?.split('@')[0],
           avatar: profile.avatar_url,
-          walletBalance: profile.wallet_balance || 0,
+          // IMPORTANT: Convert to number
+          walletBalance: Number(profile.wallet_balance) || 0,
           gamesPlayed: profile.games_played || 0,
           wins: profile.wins || 0,
           kills: profile.kills || 0,
@@ -344,7 +345,7 @@ const App: React.FC = () => {
         setTransactions(txs.map(t => ({
           id: t.id,
           type: t.type as any,
-          amount: t.amount,
+          amount: Number(t.amount),
           date: t.created_at,
           description: t.description,
           status: t.status as any
@@ -363,12 +364,19 @@ const App: React.FC = () => {
         (payload) => {
            const newProfile = payload.new as any;
            if (newProfile) {
-             setUser(prev => ({
-                ...prev,
-                walletBalance: newProfile.wallet_balance,
-                username: newProfile.username,
-                avatar: newProfile.avatar_url
-             }));
+             const newBalance = Number(newProfile.wallet_balance);
+             // Only update if the balance is different to avoid jitter from optimistic updates
+             setUser(prev => {
+                if (prev.walletBalance !== newBalance) {
+                    return {
+                        ...prev,
+                        walletBalance: newBalance,
+                        username: newProfile.username,
+                        avatar: newProfile.avatar_url
+                     };
+                }
+                return prev;
+             });
            }
         }
       )
@@ -380,12 +388,16 @@ const App: React.FC = () => {
           const newTx: Transaction = {
             id: t.id,
             type: t.type,
-            amount: t.amount,
+            amount: Number(t.amount),
             date: t.created_at,
             description: t.description,
             status: t.status
           };
-          setTransactions(prev => [newTx, ...prev]);
+          setTransactions(prev => {
+             // Avoid duplicate if optimistic update somehow added it
+             if (prev.some(tx => tx.id === newTx.id)) return prev;
+             return [newTx, ...prev];
+          });
         }
       )
       .subscribe();
@@ -395,6 +407,9 @@ const App: React.FC = () => {
 
   const handleUpdateProfile = async (updates: Partial<UserProfile>) => {
     if (!session?.user) return;
+    
+    // Optimistic Update
+    setUser(prev => ({ ...prev, ...updates }));
 
     const { error } = await supabase
         .from('profiles')
@@ -406,7 +421,7 @@ const App: React.FC = () => {
     
     if (error) {
         console.error("Error updating profile:", error);
-        alert("Failed to update profile.");
+        alert("Failed to save profile changes.");
     }
   };
 
@@ -414,26 +429,23 @@ const App: React.FC = () => {
     if (user.walletBalance >= fee) {
         setJoinedTournaments([...joinedTournaments, id]);
         
-        // 1. Deduct Balance
-        const newBalance = user.walletBalance - fee;
-        const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ wallet_balance: newBalance })
-            .eq('id', user.id);
-            
-        if (profileError) {
-             alert("Error processing transaction.");
-             return;
-        }
+        // Optimistic Balance Update
+        const oldBalance = user.walletBalance;
+        setUser(prev => ({ ...prev, walletBalance: prev.walletBalance - fee }));
 
-        // 2. Record Transaction
-        await supabase.from('transactions').insert({
-            user_id: user.id,
-            type: 'ENTRY_FEE',
-            amount: fee,
-            description: `Entry Fee: Tournament`,
-            status: 'COMPLETED'
-        });
+        const tournament = MOCK_TOURNAMENTS.find(t => t.id === id);
+        const title = tournament?.title || 'Tournament';
+
+        // Call RPC
+        const { error } = await supabase.rpc('pay_entry_fee', { amount: fee, tournament_title: title });
+
+        if (error) {
+             console.error("Join Tournament Error:", error);
+             alert(`Error: ${error.message}`);
+             // Revert
+             setUser(prev => ({ ...prev, walletBalance: oldBalance }));
+             setJoinedTournaments(prev => prev.filter(tid => tid !== id));
+        }
 
     } else {
         alert("Insufficient Balance! Please go to your wallet to add funds.");
@@ -442,40 +454,37 @@ const App: React.FC = () => {
 
   const handleAddFunds = async (amount: number) => {
     if (!session?.user) return;
-    const newBalance = user.walletBalance + amount;
+    
+    // Optimistic UI Update
+    const oldBalance = user.walletBalance;
+    setUser(prev => ({ ...prev, walletBalance: prev.walletBalance + amount }));
 
-    // 1. Update Profile
-    await supabase
-        .from('profiles')
-        .update({ wallet_balance: newBalance })
-        .eq('id', user.id);
-
-    // 2. Insert Transaction
-    await supabase.from('transactions').insert({
-        user_id: user.id,
-        type: 'DEPOSIT',
-        amount: amount,
-        description: 'Funds Added',
-        status: 'COMPLETED'
-    });
+    // Call RPC
+    const { error } = await supabase.rpc('add_funds', { amount });
+    
+    if (error) {
+        console.error("Add Funds Error:", error);
+        alert(`Failed to add funds: ${error.message}. Please ensuring you ran the updated SQL script.`);
+        // Revert
+        setUser(prev => ({ ...prev, walletBalance: oldBalance }));
+    }
   };
 
   const handleWithdraw = async (amount: number) => {
     if (user.walletBalance >= amount) {
-      const newBalance = user.walletBalance - amount;
+      // Optimistic UI Update
+      const oldBalance = user.walletBalance;
+      setUser(prev => ({ ...prev, walletBalance: prev.walletBalance - amount }));
 
-      await supabase
-        .from('profiles')
-        .update({ wallet_balance: newBalance })
-        .eq('id', user.id);
+      // Call RPC
+      const { error } = await supabase.rpc('withdraw_funds', { amount });
 
-      await supabase.from('transactions').insert({
-        user_id: user.id,
-        type: 'WITHDRAWAL',
-        amount: amount,
-        description: 'Withdrawal Request',
-        status: 'PENDING'
-      });
+      if (error) {
+         console.error("Withdraw Error:", error);
+         alert(`Withdrawal failed: ${error.message}`);
+         // Revert
+         setUser(prev => ({ ...prev, walletBalance: oldBalance }));
+      }
     } else {
       alert("Insufficient funds for withdrawal.");
     }
