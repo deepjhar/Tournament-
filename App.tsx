@@ -7,7 +7,7 @@ import MyTournamentsView from './components/MyTournamentsView';
 import AiChat from './components/AiChat';
 import AuthView from './components/AuthView';
 import { Tournament, TournamentStatus, GameType, Transaction, UserProfile } from './types';
-import { MOCK_TOURNAMENTS, INITIAL_USER, GAME_ICONS, PRE_GENERATED_RULES, MOCK_TRANSACTIONS } from './constants';
+import { MOCK_TOURNAMENTS, INITIAL_USER, GAME_ICONS, PRE_GENERATED_RULES } from './constants';
 import { generateTournamentStrategy } from './services/geminiService';
 import { supabase } from './services/supabase';
 import { Clock, Users, Trophy, ChevronLeft, MapPin, Play, CheckCircle, ChevronRight, Loader2 } from 'lucide-react';
@@ -272,16 +272,6 @@ const TournamentDetailView: React.FC<{
   );
 };
 
-// Helper to get stored profile
-const getStoredProfile = () => {
-    try {
-        const stored = localStorage.getItem('battlezone_user_profile');
-        return stored ? JSON.parse(stored) : {};
-    } catch (e) {
-        return {};
-    }
-};
-
 // Main App Component
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('home');
@@ -293,122 +283,199 @@ const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   
-  // Initialize User with fallback to local storage
-  const [user, setUser] = useState<UserProfile>(() => ({
+  // Initialize User with zeroes to start
+  const [user, setUser] = useState<UserProfile>({
     ...INITIAL_USER,
-    ...getStoredProfile()
-  }));
+    walletBalance: 0,
+    wins: 0,
+    kills: 0
+  });
 
-  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  // Initialize Session
+  // Fetch Data on Load
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      
-      const stored = getStoredProfile();
-
-      if (session?.user) {
-        setUser(prev => ({
-           ...prev,
-           id: session.user.id,
-           username: stored.username || session.user.email?.split('@')[0] || prev.username,
-           avatar: stored.avatar || prev.avatar,
-           walletBalance: stored.walletBalance !== undefined ? stored.walletBalance : prev.walletBalance
-         }));
-      } else {
-        // If not logged in, we might still have stored edits for the guest user
-        setUser(prev => ({ ...prev, ...stored }));
-      }
       setAuthLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      const stored = getStoredProfile();
-      
-      if (session?.user) {
-        setUser(prev => ({
-           ...prev,
-           id: session.user.id,
-           username: stored.username || session.user.email?.split('@')[0] || prev.username,
-           avatar: stored.avatar || prev.avatar,
-           walletBalance: stored.walletBalance !== undefined ? stored.walletBalance : prev.walletBalance
-         }));
-      }
       setAuthLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleUpdateProfile = (updates: Partial<UserProfile>) => {
-    setUser(prev => {
-        const updated = { ...prev, ...updates };
-        // Save to local storage for persistence
-        const toSave = {
-            username: updated.username,
-            avatar: updated.avatar,
-            walletBalance: updated.walletBalance
-        };
-        localStorage.setItem('battlezone_user_profile', JSON.stringify(toSave));
-        return updated;
-    });
+  // Fetch Profile & Transactions when Session is available
+  useEffect(() => {
+    if (!session?.user) return;
+
+    const fetchData = async () => {
+      // Get Profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (profile) {
+        setUser({
+          id: profile.id,
+          username: profile.username || session.user.email?.split('@')[0],
+          avatar: profile.avatar_url,
+          walletBalance: profile.wallet_balance || 0,
+          gamesPlayed: profile.games_played || 0,
+          wins: profile.wins || 0,
+          kills: profile.kills || 0,
+          kdRatio: profile.kd_ratio || 0
+        });
+      }
+
+      // Get Transactions
+      const { data: txs } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false });
+
+      if (txs) {
+        setTransactions(txs.map(t => ({
+          id: t.id,
+          type: t.type as any,
+          amount: t.amount,
+          date: t.created_at,
+          description: t.description,
+          status: t.status as any
+        })));
+      }
+    };
+
+    fetchData();
+
+    // Realtime Subscriptions
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` },
+        (payload) => {
+           const newProfile = payload.new as any;
+           if (newProfile) {
+             setUser(prev => ({
+                ...prev,
+                walletBalance: newProfile.wallet_balance,
+                username: newProfile.username,
+                avatar: newProfile.avatar_url
+             }));
+           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'transactions', filter: `user_id=eq.${session.user.id}` },
+        (payload) => {
+          const t = payload.new as any;
+          const newTx: Transaction = {
+            id: t.id,
+            type: t.type,
+            amount: t.amount,
+            date: t.created_at,
+            description: t.description,
+            status: t.status
+          };
+          setTransactions(prev => [newTx, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [session]);
+
+  const handleUpdateProfile = async (updates: Partial<UserProfile>) => {
+    if (!session?.user) return;
+
+    const { error } = await supabase
+        .from('profiles')
+        .update({
+            username: updates.username,
+            avatar_url: updates.avatar
+        })
+        .eq('id', user.id);
+    
+    if (error) {
+        console.error("Error updating profile:", error);
+        alert("Failed to update profile.");
+    }
   };
 
-  const handleJoinTournament = (id: string, fee: number) => {
+  const handleJoinTournament = async (id: string, fee: number) => {
     if (user.walletBalance >= fee) {
         setJoinedTournaments([...joinedTournaments, id]);
         
-        // Update user wallet via handleUpdateProfile to persist
+        // 1. Deduct Balance
         const newBalance = user.walletBalance - fee;
-        handleUpdateProfile({ walletBalance: newBalance });
-        
-        // Record Transaction
-        const newTx: Transaction = {
-          id: `tx${Date.now()}`,
-          type: 'ENTRY_FEE',
-          amount: fee,
-          date: new Date().toISOString(),
-          description: `Entry Fee: Tournament #${id}`,
-          status: 'COMPLETED'
-        };
-        setTransactions([newTx, ...transactions]);
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ wallet_balance: newBalance })
+            .eq('id', user.id);
+            
+        if (profileError) {
+             alert("Error processing transaction.");
+             return;
+        }
+
+        // 2. Record Transaction
+        await supabase.from('transactions').insert({
+            user_id: user.id,
+            type: 'ENTRY_FEE',
+            amount: fee,
+            description: `Entry Fee: Tournament`,
+            status: 'COMPLETED'
+        });
 
     } else {
         alert("Insufficient Balance! Please go to your wallet to add funds.");
     }
   };
 
-  const handleAddFunds = (amount: number) => {
+  const handleAddFunds = async (amount: number) => {
+    if (!session?.user) return;
     const newBalance = user.walletBalance + amount;
-    handleUpdateProfile({ walletBalance: newBalance });
-    
-    const newTx: Transaction = {
-      id: `tx${Date.now()}`,
-      type: 'DEPOSIT',
-      amount: amount,
-      date: new Date().toISOString(),
-      description: 'Funds Added',
-      status: 'COMPLETED'
-    };
-    setTransactions([newTx, ...transactions]);
+
+    // 1. Update Profile
+    await supabase
+        .from('profiles')
+        .update({ wallet_balance: newBalance })
+        .eq('id', user.id);
+
+    // 2. Insert Transaction
+    await supabase.from('transactions').insert({
+        user_id: user.id,
+        type: 'DEPOSIT',
+        amount: amount,
+        description: 'Funds Added',
+        status: 'COMPLETED'
+    });
   };
 
-  const handleWithdraw = (amount: number) => {
+  const handleWithdraw = async (amount: number) => {
     if (user.walletBalance >= amount) {
       const newBalance = user.walletBalance - amount;
-      handleUpdateProfile({ walletBalance: newBalance });
 
-      const newTx: Transaction = {
-        id: `tx${Date.now()}`,
+      await supabase
+        .from('profiles')
+        .update({ wallet_balance: newBalance })
+        .eq('id', user.id);
+
+      await supabase.from('transactions').insert({
+        user_id: user.id,
         type: 'WITHDRAWAL',
         amount: amount,
-        date: new Date().toISOString(),
         description: 'Withdrawal Request',
         status: 'PENDING'
-      };
-      setTransactions([newTx, ...transactions]);
+      });
     } else {
       alert("Insufficient funds for withdrawal.");
     }
@@ -417,8 +484,7 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     if (confirm("Are you sure you want to logout?")) {
         await supabase.auth.signOut();
-        localStorage.removeItem('battlezone_user_profile'); // Optional: clear local profile on logout
-        window.location.reload();
+        // State will update via the onAuthStateChange listener
     }
   };
 
