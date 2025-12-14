@@ -11,7 +11,7 @@ import AuthView from './components/AuthView';
 import { Tournament, GameType, Transaction, UserProfile, mapTournamentFromDB } from './types';
 import { INITIAL_USER, GAME_ICONS } from './constants';
 import { supabase } from './services/supabase';
-import { Loader2, LogOut, ShieldX } from 'lucide-react';
+import { Loader2, LogOut, ShieldX, RefreshCw } from 'lucide-react';
 import { Session } from '@supabase/supabase-js';
 
 // Lazy Load Admin View
@@ -182,10 +182,28 @@ const App: React.FC = () => {
           <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-center p-4">
               <ShieldX className="w-24 h-24 text-red-600 mb-6" />
               <h1 className="text-4xl font-bold text-white font-rajdhani mb-2">ACCESS DENIED</h1>
-              <p className="text-slate-400 mb-8 max-w-md">Your account does not have administrative privileges. Please log in with an admin account or return to the player portal.</p>
-              <button onClick={handleLogout} className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded-lg flex items-center transition-colors">
-                  <LogOut className="w-5 h-5 mr-2" /> Sign Out
-              </button>
+              <p className="text-slate-400 mb-8 max-w-md">Your account does not have administrative privileges.</p>
+              
+              {/* Developer Helper Section - ONLY FOR SETUP */}
+              <div className="bg-slate-900 p-6 rounded-lg border border-slate-800 max-w-lg w-full mb-8 text-left shadow-xl">
+                  <h3 className="text-yellow-500 font-bold mb-3 uppercase text-xs tracking-wider border-b border-slate-800 pb-2">Developer Quick Fix (Run in Supabase SQL Editor)</h3>
+                  <p className="text-slate-400 text-sm mb-3">Copy and run this command to make yourself an Admin:</p>
+                  <div className="bg-black p-4 rounded border border-slate-700 font-mono text-xs text-green-400 break-all select-all relative group">
+                      UPDATE public.profiles SET is_admin = true WHERE id = '{session.user.id}';
+                  </div>
+                  <div className="mt-4 flex justify-between items-center text-xs text-slate-500">
+                      <span>User Email: <span className="text-slate-300">{session.user.email}</span></span>
+                  </div>
+              </div>
+
+              <div className="flex space-x-4">
+                <button onClick={() => window.location.reload()} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center">
+                    <RefreshCw className="w-4 h-4 mr-2" /> I've Updated Database (Reload)
+                </button>
+                <button onClick={handleLogout} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center">
+                    <LogOut className="w-4 h-4 mr-2" /> Sign Out
+                </button>
+              </div>
           </div>
       );
   }

@@ -29,26 +29,15 @@ const AuthView: React.FC = () => {
         alert('Registration successful! Please check your email to confirm your account.');
       } else {
         // 1. Perform Sign In
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        const { error: authError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (authError) throw authError;
 
-        // 2. If Admin Mode, STRICTLY check the profile role immediately
-        if (isAdminMode && authData.user) {
-           const { data: profile, error: profileError } = await supabase
-             .from('profiles')
-             .select('is_admin')
-             .eq('id', authData.user.id)
-             .single();
-             
-           if (profileError || !profile?.is_admin) {
-             // Not an admin? Sign them out immediately.
-             await supabase.auth.signOut();
-             throw new Error("Access Denied: You do not have Administrator privileges.");
-           }
-        }
+        // NOTE: We allow login to proceed even if not admin. 
+        // App.tsx handles the "Access Denied" screen which provides the User ID 
+        // to help the developer set up the first admin account.
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
