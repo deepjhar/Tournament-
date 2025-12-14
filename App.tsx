@@ -11,7 +11,7 @@ import AuthView from './components/AuthView';
 import { Tournament, GameType, Transaction, UserProfile, mapTournamentFromDB } from './types';
 import { INITIAL_USER, GAME_ICONS } from './constants';
 import { supabase } from './services/supabase';
-import { Loader2, LogOut, ShieldX, RefreshCw } from 'lucide-react';
+import { Loader2, LogOut, ShieldX, RefreshCw, LockKeyhole } from 'lucide-react';
 import { Session } from '@supabase/supabase-js';
 
 // Lazy Load Admin View
@@ -173,6 +173,22 @@ const App: React.FC = () => {
 
   const handleLogout = async () => { if (confirm("Logout?")) await supabase.auth.signOut(); };
 
+  // Developer Quick Fix to Promote Self to Admin
+  const handleBecomeAdmin = async () => {
+    const secret = prompt("Enter Developer Secret Code (Try: admin123)");
+    if (secret === "admin123") {
+        const { error } = await supabase.from('profiles').update({ is_admin: true }).eq('id', user.id);
+        if (error) {
+            alert("Error: " + error.message + "\n\nAuto-update failed. You must run the SQL manually in Supabase.");
+        } else {
+            alert("Success! Privileges upgraded. Reloading...");
+            window.location.reload();
+        }
+    } else {
+        alert("Incorrect secret code.");
+    }
+  };
+
   if (authLoading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center"><Loader2 className="w-12 h-12 text-indigo-500 animate-spin" /></div>;
   if (!session) return <AuthView />;
 
@@ -180,29 +196,34 @@ const App: React.FC = () => {
   if (IS_ADMIN_SITE && !user.isAdmin) {
       return (
           <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-center p-4">
-              <ShieldX className="w-24 h-24 text-red-600 mb-6" />
+              <ShieldX className="w-24 h-24 text-red-600 mb-6 animate-pulse" />
               <h1 className="text-4xl font-bold text-white font-rajdhani mb-2">ACCESS DENIED</h1>
-              <p className="text-slate-400 mb-8 max-w-md">Your account does not have administrative privileges.</p>
+              <p className="text-slate-400 mb-8 max-w-md">
+                  This area is restricted to administrators only.<br/>
+                  Your account <span className="text-white font-mono">{session.user.email}</span> does not have access.
+              </p>
               
-              {/* Developer Helper Section - ONLY FOR SETUP */}
-              <div className="bg-slate-900 p-6 rounded-lg border border-slate-800 max-w-lg w-full mb-8 text-left shadow-xl">
-                  <h3 className="text-yellow-500 font-bold mb-3 uppercase text-xs tracking-wider border-b border-slate-800 pb-2">Developer Quick Fix (Run in Supabase SQL Editor)</h3>
-                  <p className="text-slate-400 text-sm mb-3">Copy and run this command to make yourself an Admin:</p>
-                  <div className="bg-black p-4 rounded border border-slate-700 font-mono text-xs text-green-400 break-all select-all relative group">
-                      UPDATE public.profiles SET is_admin = true WHERE id = '{session.user.id}';
-                  </div>
-                  <div className="mt-4 flex justify-between items-center text-xs text-slate-500">
-                      <span>User Email: <span className="text-slate-300">{session.user.email}</span></span>
-                  </div>
+              <div className="flex flex-col space-y-4 w-full max-w-xs">
+                <button onClick={handleBecomeAdmin} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center shadow-lg shadow-indigo-600/20">
+                    <LockKeyhole className="w-4 h-4 mr-2" /> ⚡ ENABLE ADMIN ACCESS
+                </button>
+                
+                <div className="flex space-x-3">
+                    <button onClick={() => window.location.reload()} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg transition-colors">
+                        <RefreshCw className="w-4 h-4 mx-auto" />
+                    </button>
+                    <button onClick={handleLogout} className="flex-1 bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-900/50 font-bold py-3 rounded-lg transition-colors flex items-center justify-center">
+                        <LogOut className="w-4 h-4 mr-2" /> Logout
+                    </button>
+                </div>
               </div>
 
-              <div className="flex space-x-4">
-                <button onClick={() => window.location.reload()} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center">
-                    <RefreshCw className="w-4 h-4 mr-2" /> I've Updated Database (Reload)
-                </button>
-                <button onClick={handleLogout} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center">
-                    <LogOut className="w-4 h-4 mr-2" /> Sign Out
-                </button>
+              {/* SQL Backup Info */}
+              <div className="mt-12 opacity-50 text-xs text-left max-w-md w-full">
+                  <p className="mb-2 text-slate-500">Or run this SQL in Supabase if button fails:</p>
+                  <code className="block bg-black p-3 rounded text-green-500 font-mono break-all select-all">
+                      UPDATE profiles SET is_admin = true WHERE id = '{session.user.id}';
+                  </code>
               </div>
           </div>
       );
