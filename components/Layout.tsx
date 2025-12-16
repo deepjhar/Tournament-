@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserProfile } from '../types';
-import { Trophy, User, Wallet, Home, Swords, ShieldAlert, LogOut } from 'lucide-react';
+import { Trophy, User, Wallet, Home, Swords, ShieldAlert, LogOut, Headset } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -68,6 +68,15 @@ const Layout: React.FC<LayoutProps> = ({ children, user, currentView, onNavigate
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* Support Icon */}
+              <button 
+                onClick={() => window.open('mailto:support@battlezone.com')}
+                className="hidden sm:flex items-center justify-center h-9 w-9 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-indigo-400 transition-colors border border-slate-700"
+                title="Contact Support"
+              >
+                <Headset className="h-4 w-4" />
+              </button>
+
               {!isAdminMode && (
                 <button 
                   onClick={() => onNavigate('wallet')}
